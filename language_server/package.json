@@ -1,6 +1,6 @@
 {
   "name": "zed-hexpeek-language-server",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A language server used for zed-hexpeek extension, to provide Hover functionality",
   "homepage": "https://github.com/A-23187/zed-hexpeek#readme",
   "bugs": {
