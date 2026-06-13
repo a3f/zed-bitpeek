@@ -9462,8 +9462,8 @@ Decimal (BE): ${bigNum}
 Decimal (LE): ${numInLE}
 Hexadecimal: 0x${hexs}
 ${macroLine}Ascii:       ${ascii}
-Time (S):    ${num}s = ${toISOString(num * 1e3)}
-Time (MS):   ${num}ms = ${toISOString(num)}
+Time (S):  ${toISOString(num * 1e3)}
+Time (MS): ${toISOString(num)}
 \`\`\`
 `
     },
