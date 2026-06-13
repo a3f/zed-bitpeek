@@ -82,26 +82,17 @@ function formatMacro(value) {
   return null;
 }
 
-connection.onInitialize((params) => {
-  return { capabilities: { hoverProvider: true } };
-});
-
-connection.onHover((params) => {
-  const doc = documents.get(params.textDocument.uri);
-  if (!doc) {
-    connection.console.error(`Document ${params.textDocument.uri} not found`);
-    return null;
-  }
+function parseNumberAtPosition(doc, position) {
   const line = doc.getText({
-    start: { line: params.position.line, character: 0 },
-    end: { line: params.position.line, character: Number.MAX_SAFE_INTEGER },
+    start: { line: position.line, character: 0 },
+    end: { line: position.line, character: Number.MAX_SAFE_INTEGER },
   });
-  let wordStart = params.position.character;
+  let wordStart = position.character;
   while (wordStart >= 0 && line.charAt(wordStart).match(/['\w]/)) {
     wordStart--;
   }
   wordStart++;
-  let wordEnd = params.position.character;
+  let wordEnd = position.character;
   while (wordEnd < line.length && line.charAt(wordEnd).match(/['\w]/)) {
     wordEnd++;
   }
@@ -109,16 +100,22 @@ connection.onHover((params) => {
   if (wordStart >= wordEnd) {
     return null;
   }
+
   let word = line.substring(wordStart, wordEnd);
+  let hasNegativePrefix = wordStart > 0 && line.charAt(wordStart - 1) == "-";
   connection.console.log(`word: ${word}`);
   if (word.charAt(0) == "-") {
     word = word.substring(1);
     wordStart++;
+    hasNegativePrefix = true;
   }
+
   let num = 0;
   let bigNum = 0n;
   let hexs = "";
+  let literalKind = "";
   if (word.match(/^(0[bB]['01]*[01]|0[bB][_01]*[01])$/)) {
+    literalKind = "binary";
     connection.console.log("bin");
     for (let i = 0; i < word.length; i++) {
       let ch = word.charAt(i);
@@ -130,6 +127,7 @@ connection.onHover((params) => {
       bigNum = bigNum * 2n + BigInt(digit);
     }
   } else if (word.match(/^(0[oO]?['0-7]*[0-7]|0[oO]?[_0-7]*[0-7])$/)) {
+    literalKind = "octal";
     connection.console.log("oct");
     for (let i = 0; i < word.length; i++) {
       let ch = word.charAt(i);
@@ -145,6 +143,7 @@ connection.onHover((params) => {
       /^(0[xX]['0-9a-fA-F]*[0-9a-fA-F]|0[xX][_0-9a-fA-F]*[0-9a-fA-F])$/,
     )
   ) {
+    literalKind = "hex";
     connection.console.log("hex");
     for (let i = 0; i < word.length; i++) {
       let ch = word.charAt(i);
@@ -162,6 +161,7 @@ connection.onHover((params) => {
     }
     hexs = word.substring(2);
   } else if (word.match(/^([0-9]|[1-9]['0-9]*[0-9]|[1-9][_0-9]*[0-9])$/)) {
+    literalKind = "decimal";
     connection.console.log("dec");
     for (let i = 0; i < word.length; i++) {
       let ch = word.charAt(i);
@@ -175,8 +175,98 @@ connection.onHover((params) => {
   } else {
     return null;
   }
+
   hexs = hexs || num.toString(16);
-  const macro = formatMacro(bigNum);
+
+  return {
+    word,
+    num,
+    bigNum,
+    hexs,
+    literalKind,
+    hasNegativePrefix,
+    macro: formatMacro(bigNum),
+    range: {
+      start: {
+        line: position.line,
+        character: wordStart,
+      },
+      end: {
+        line: position.line,
+        character: wordEnd,
+      },
+    },
+  };
+}
+
+function replacementAction(uri, range, replacement) {
+  return {
+    title: `Replace with ${replacement}`,
+    kind: "refactor.rewrite",
+    edit: {
+      changes: {
+        [uri]: [{ range, newText: replacement }],
+      },
+    },
+  };
+}
+
+function macroReplacementActions(uri, parsed) {
+  if (
+    !parsed ||
+    parsed.literalKind != "hex" ||
+    parsed.hasNegativePrefix ||
+    parsed.bigNum <= 0n
+  ) {
+    return [];
+  }
+
+  if (isPowerOfTwo(parsed.bigNum)) {
+    const bit = highestSetBit(parsed.bigNum);
+    const actions = [replacementAction(uri, parsed.range, `BIT(${bit})`)];
+    const sizeMacro = formatSizeMacro(parsed.bigNum);
+    if (sizeMacro) {
+      actions.push(replacementAction(uri, parsed.range, sizeMacro));
+    }
+    return actions;
+  }
+
+  const range = consecutiveSetBitRange(parsed.bigNum);
+  if (!range) {
+    return [];
+  }
+
+  return [
+    replacementAction(
+      uri,
+      parsed.range,
+      `GENMASK(${range.highest}, ${range.lowest})`,
+    ),
+  ];
+}
+
+connection.onInitialize((params) => {
+  return {
+    capabilities: {
+      hoverProvider: true,
+      codeActionProvider: true,
+    },
+  };
+});
+
+connection.onHover((params) => {
+  const doc = documents.get(params.textDocument.uri);
+  if (!doc) {
+    connection.console.error(`Document ${params.textDocument.uri} not found`);
+    return null;
+  }
+
+  const parsed = parseNumberAtPosition(doc, params.position);
+  if (!parsed) {
+    return null;
+  }
+
+  const { word, num, hexs, macro, range } = parsed;
   const macroLine = macro ? `Macro:      ${macro}\n` : "";
   connection.console.log(`hex: ${hexs}`);
   let numInLE = 0;
@@ -214,17 +304,19 @@ Time:
 \`\`\`
 `,
     },
-    range: {
-      start: {
-        line: params.position.line,
-        character: wordStart,
-      },
-      end: {
-        line: params.position.line,
-        character: wordEnd,
-      },
-    },
+    range,
   };
+});
+
+connection.onCodeAction((params) => {
+  const doc = documents.get(params.textDocument.uri);
+  if (!doc) {
+    connection.console.error(`Document ${params.textDocument.uri} not found`);
+    return [];
+  }
+
+  const parsed = parseNumberAtPosition(doc, params.range.start);
+  return macroReplacementActions(params.textDocument.uri, parsed);
 });
 
 documents.listen(connection);
