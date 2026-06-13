@@ -1,7 +1,9 @@
 use zed_extension_api::{self as zed};
 
-const SERVER_SCRIPT: &'static str =
-    concat!(env!("CARGO_MANIFEST_DIR"), "/language_server/src/server.js");
+const SERVER_SCRIPT: &'static str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/language_server/dist/server.cjs"
+);
 
 struct HexPeekExtension;
 

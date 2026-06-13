@@ -18,7 +18,7 @@ Zed-HexPeek, an extension for [Zed](https://zed.dev) editor to peek various form
 ```
 
 ## Known Issues
-1. This extension provides hover capabilities through [zed-hexpeek-language-server](https://www.npmjs.com/package/zed-hexpeek-language-server), a simple language server. Since Zed's language server extension must declare the languages the language server supports.
+1. This extension provides hover capabilities through a bundled HexPeek language server. Since Zed's language server extension must declare the languages the language server supports.
 ```toml
 [language_servers.hexpeek-language-server]
 name = "HexPeek Language Server"
@@ -28,4 +28,3 @@ And this extension supports the above languages. If you are using a language whi
 
 ## License
 Apache 2.0
-
