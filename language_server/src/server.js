@@ -7,6 +7,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 const connection = createConnection(ProposedFeatures.all);
 const documents = new TextDocuments(TextDocument);
+const MAX_MACRO_BIT_INDEX = 4096;
 
 function fromCharCode(code) {
   if (0 <= code && code <= 31) {
@@ -16,6 +17,11 @@ function fromCharCode(code) {
   } else if (code == 127) {
     return "\u2421";
   }
+}
+
+function toISOString(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.valueOf()) ? "Invalid Date" : date.toISOString();
 }
 
 function isPowerOfTwo(value) {
@@ -95,18 +101,117 @@ function stripIntegerSuffix(word) {
   return word;
 }
 
+function isNameChar(ch) {
+  return ch && /[\w']/.test(ch);
+}
+
+function positionInRange(position, start, end) {
+  return start <= position.character && position.character <= end;
+}
+
+function parsedMacroValue(word, bigNum, line, start, end) {
+  return {
+    word,
+    num: Number(bigNum),
+    bigNum,
+    hexs: bigNum.toString(16),
+    literalKind: "macro",
+    hasNegativePrefix: false,
+    macro: formatMacro(bigNum),
+    range: {
+      start: {
+        line,
+        character: start,
+      },
+      end: {
+        line,
+        character: end,
+      },
+    },
+  };
+}
+
+function parseBitIndex(value) {
+  const bit = Number(value);
+  if (
+    !Number.isSafeInteger(bit) ||
+    bit < 0 ||
+    bit > MAX_MACRO_BIT_INDEX
+  ) {
+    return null;
+  }
+  return bit;
+}
+
+function parseMacroAtPosition(line, position) {
+  const macroPatterns = [
+    {
+      regex: /GENMASK\(\s*(\d+)\s*,\s*(\d+)\s*\)/g,
+      value(match) {
+        const high = parseBitIndex(match[1]);
+        const low = parseBitIndex(match[2]);
+        if (high === null || low === null || high < low) {
+          return null;
+        }
+
+        return ((1n << BigInt(high - low + 1)) - 1n) << BigInt(low);
+      },
+    },
+    {
+      regex: /BIT\(\s*(\d+)\s*\)/g,
+      value(match) {
+        const bit = parseBitIndex(match[1]);
+        return bit === null ? null : 1n << BigInt(bit);
+      },
+    },
+    {
+      regex: /SZ_(\d+)K/g,
+      value(match) {
+        return BigInt(match[1]) * 1024n;
+      },
+    },
+  ];
+
+  for (const { regex, value } of macroPatterns) {
+    let match;
+    while ((match = regex.exec(line))) {
+      const start = match.index;
+      const end = start + match[0].length;
+      if (isNameChar(line.charAt(start - 1)) || isNameChar(line.charAt(end))) {
+        continue;
+      }
+      if (!positionInRange(position, start, end)) {
+        continue;
+      }
+
+      const bigNum = value(match);
+      if (bigNum === null) {
+        return null;
+      }
+      return parsedMacroValue(match[0], bigNum, position.line, start, end);
+    }
+  }
+
+  return null;
+}
+
 function parseNumberAtPosition(doc, position) {
   const line = doc.getText({
     start: { line: position.line, character: 0 },
     end: { line: position.line, character: Number.MAX_SAFE_INTEGER },
   });
+  const macro = parseMacroAtPosition(line, position);
+  if (macro) {
+    return macro;
+  }
+
   let wordStart = position.character;
-  while (wordStart >= 0 && line.charAt(wordStart).match(/['\w]/)) {
+  while (wordStart >= 0 && isNameChar(line.charAt(wordStart))) {
     wordStart--;
   }
   wordStart++;
   let wordEnd = position.character;
-  while (wordEnd < line.length && line.charAt(wordEnd).match(/['\w]/)) {
+  while (wordEnd < line.length && isNameChar(line.charAt(wordEnd))) {
     wordEnd++;
   }
   connection.console.log(`wordStart: ${wordStart}, wordEnd: ${wordEnd}`);
@@ -284,7 +389,7 @@ connection.onHover((params) => {
     return null;
   }
 
-  const { word, num, hexs, macro, range } = parsed;
+  const { word, num, bigNum, hexs, macro, range } = parsed;
   const macroLine = macro ? `Macro:      ${macro}\n` : "";
   connection.console.log(`hex: ${hexs}`);
   let numInLE = 0;
@@ -309,16 +414,16 @@ connection.onHover((params) => {
       kind: "markdown",
       value: `[**HexPeek**](https://github.com/A-23187/zed-hexpeek) \`${word}\`
 \`\`\`
-Binary:      0b${num.toString(2)}
-Octal:       0o${num.toString(8)}
+Binary:      0b${bigNum.toString(2)}
+Octal:       0o${bigNum.toString(8)}
 Decimal:
-  in BE:     ${num}
+  in BE:     ${bigNum}
   in LE:     ${numInLE}
 Hexadecimal: 0x${hexs}
 ${macroLine}Ascii:       ${ascii}
 Time:
-  in  S:     ${new Date(num * 1000).toISOString()}
-  in MS:     ${new Date(num).toISOString()}
+  in  S:     ${toISOString(num * 1000)}
+  in MS:     ${toISOString(num)}
 \`\`\`
 `,
     },
