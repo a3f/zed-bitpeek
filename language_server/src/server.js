@@ -82,6 +82,19 @@ function formatMacro(value) {
   return null;
 }
 
+function stripIntegerSuffix(word) {
+  const suffixes = ["llu", "ull", "lu", "ul", "u"];
+  const lowerWord = word.toLowerCase();
+
+  for (const suffix of suffixes) {
+    if (lowerWord.endsWith(suffix)) {
+      return word.substring(0, word.length - suffix.length);
+    }
+  }
+
+  return word;
+}
+
 function parseNumberAtPosition(doc, position) {
   const line = doc.getText({
     start: { line: position.line, character: 0 },
@@ -109,16 +122,17 @@ function parseNumberAtPosition(doc, position) {
     wordStart++;
     hasNegativePrefix = true;
   }
+  const numericWord = stripIntegerSuffix(word);
 
   let num = 0;
   let bigNum = 0n;
   let hexs = "";
   let literalKind = "";
-  if (word.match(/^(0[bB]['01]*[01]|0[bB][_01]*[01])$/)) {
+  if (numericWord.match(/^(0[bB]['01]*[01]|0[bB][_01]*[01])$/)) {
     literalKind = "binary";
     connection.console.log("bin");
-    for (let i = 0; i < word.length; i++) {
-      let ch = word.charAt(i);
+    for (let i = 0; i < numericWord.length; i++) {
+      let ch = numericWord.charAt(i);
       if (ch == "b" || ch == "B" || ch == "'" || ch == "_") {
         continue;
       }
@@ -126,11 +140,13 @@ function parseNumberAtPosition(doc, position) {
       num = num * 2 + digit;
       bigNum = bigNum * 2n + BigInt(digit);
     }
-  } else if (word.match(/^(0[oO]?['0-7]*[0-7]|0[oO]?[_0-7]*[0-7])$/)) {
+  } else if (
+    numericWord.match(/^(0[oO]?['0-7]*[0-7]|0[oO]?[_0-7]*[0-7])$/)
+  ) {
     literalKind = "octal";
     connection.console.log("oct");
-    for (let i = 0; i < word.length; i++) {
-      let ch = word.charAt(i);
+    for (let i = 0; i < numericWord.length; i++) {
+      let ch = numericWord.charAt(i);
       if (ch == "o" || ch == "O" || ch == "'" || ch == "_") {
         continue;
       }
@@ -139,14 +155,14 @@ function parseNumberAtPosition(doc, position) {
       bigNum = bigNum * 8n + BigInt(digit);
     }
   } else if (
-    word.match(
+    numericWord.match(
       /^(0[xX]['0-9a-fA-F]*[0-9a-fA-F]|0[xX][_0-9a-fA-F]*[0-9a-fA-F])$/,
     )
   ) {
     literalKind = "hex";
     connection.console.log("hex");
-    for (let i = 0; i < word.length; i++) {
-      let ch = word.charAt(i);
+    for (let i = 0; i < numericWord.length; i++) {
+      let ch = numericWord.charAt(i);
       if (ch == "x" || ch == "X" || ch == "'" || ch == "_") {
         continue;
       }
@@ -159,12 +175,14 @@ function parseNumberAtPosition(doc, position) {
       num = num * 16 + digit;
       bigNum = bigNum * 16n + BigInt(digit);
     }
-    hexs = word.substring(2);
-  } else if (word.match(/^([0-9]|[1-9]['0-9]*[0-9]|[1-9][_0-9]*[0-9])$/)) {
+    hexs = numericWord.substring(2);
+  } else if (
+    numericWord.match(/^([0-9]|[1-9]['0-9]*[0-9]|[1-9][_0-9]*[0-9])$/)
+  ) {
     literalKind = "decimal";
     connection.console.log("dec");
-    for (let i = 0; i < word.length; i++) {
-      let ch = word.charAt(i);
+    for (let i = 0; i < numericWord.length; i++) {
+      let ch = numericWord.charAt(i);
       if (ch == "'" || ch == "_") {
         continue;
       }
