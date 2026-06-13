@@ -9458,14 +9458,12 @@ connection.onHover((params) => {
 \`\`\`
 Binary:      0b${bigNum.toString(2)}
 Octal:       0o${bigNum.toString(8)}
-Decimal:
-  in BE:     ${bigNum}
-  in LE:     ${numInLE}
+Decimal (BE): ${bigNum}
+Decimal (LE): ${numInLE}
 Hexadecimal: 0x${hexs}
 ${macroLine}Ascii:       ${ascii}
-Time:
-  in  S:     ${toISOString(num * 1e3)}
-  in MS:     ${toISOString(num)}
+Time (S):    ${num}s = ${toISOString(num * 1e3)}
+Time (MS):   ${num}ms = ${toISOString(num)}
 \`\`\`
 `
     },
