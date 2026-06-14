@@ -9161,7 +9161,7 @@ function formattedMacroValue(value) {
   return [
     escapeMarkdownTableValue(macro[1]),
     escapeMarkdownTableValue(macro[2])
-  ].join(" ");
+  ].join("\xA0\xA0");
 }
 function formattedHoverValue(row) {
   switch (row.label) {

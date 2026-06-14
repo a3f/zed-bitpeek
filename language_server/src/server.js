@@ -81,7 +81,7 @@ function formattedMacroValue(value) {
   return [
     escapeMarkdownTableValue(macro[1]),
     escapeMarkdownTableValue(macro[2]),
-  ].join(" ");
+  ].join("\u00a0\u00a0");
 }
 
 function formattedHoverValue(row) {
