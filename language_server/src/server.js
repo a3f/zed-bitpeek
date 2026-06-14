@@ -504,9 +504,9 @@ connection.onHover((params) => {
   let rows = [
     translatedRow("Binary", `0b${bigNum.toString(2)}`),
     translatedRow("Octal", `0o${bigNum.toString(8)}`),
-    translatedRow("Decimal (BE)", bigNum),
-    translatedRow("Decimal (LE)", numInLE),
-    translatedRow("Hexadecimal", `0x${hexs}`),
+    translatedRow("Dec (BE)", bigNum),
+    translatedRow("Dec (LE)", numInLE),
+    translatedRow("Hex", `0x${hexs}`),
   ];
   if (macro) {
     rows.push(translatedRow("Macro", macro));
