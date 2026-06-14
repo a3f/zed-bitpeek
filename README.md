@@ -1,30 +1,52 @@
-# Zed-HexPeek
-Zed-HexPeek, an extension for [Zed](https://zed.dev) editor to peek various forms of a number literal.
+# Zed HexPeek
 
-![zed-hexpeek](https://github.com/user-attachments/assets/e602ea53-487e-4bd7-9cb5-4d78b748f53b)
+Zed HexPeek is a [Zed](https://zed.dev) extension that shows alternate representations of integer literals on hover. This repository is based on [A-23187/zed-hexpeek](https://github.com/A-23187/zed-hexpeek) and keeps the original literal conversion behavior while adding C and Linux-kernel-oriented helpers.
 
+## What Changed From Upstream
+
+- Adds macro-aware hovers for `BIT(n)`, `GENMASK(high, low)`, and `SZ_<n>K` values.
+- Shows suggested macro equivalents, including `SZ_*` aliases where applicable, for positive powers of two and contiguous bit masks.
+- Adds code actions that rewrite eligible hex literals to `BIT(n)`, `SZ_*`, or `GENMASK(high, low)`.
+- Accepts common C integer suffixes such as `u`, `ul`, `lu`, `ull`, and `llu`.
+- Reworks hover output from a code block into a compact markdown table with the hovered representation promoted to the header.
+- Bundles and launches the checked-out language server from `language_server/dist/server.cjs` instead of installing the npm package at runtime.
+
+## Screenshots
+
+![Hover table with a BIT and size macro suggestion](screenshots/hex-1bit-set-hover.png)
+
+![Code actions for replacing a one-bit hex literal](screenshots/hex-1bit-set-codeaction.png)
+
+![Additional macro hover/code-action example](screenshots/hex-2bit-set-codeaction.png)
 
 ## Setup
-1. Install [the extension](https://zed.dev/extensions/hexpeek) from the Zed extension marketplace
-2. Enable the zed-hexpeek language server by adding the following to your `.zed/settings.json` (or `~/.config/zed/settings.json` for all workspaces)
+
+Enable the HexPeek language server for the languages where you want numeric hovers:
+
 ```json
 {
   "languages": {
-    "C++": { // the language you want to enable the extension for
+    "C++": {
       "language_servers": ["hexpeek-language-server"]
     }
   }
 }
 ```
 
-## Known Issues
-1. This extension provides hover capabilities through a bundled HexPeek language server. Since Zed's language server extension must declare the languages the language server supports.
-```toml
-[language_servers.hexpeek-language-server]
-name = "HexPeek Language Server"
-languages = ["Astro", "C", "C#", "C++", "CSS", "Clojure", "Coffeescript", "Dart", "Diff", "ERB", "Elixir", "Erlang", "F#", "GLSL", "Git Commit", "Gleam", "Go Mod", "Go Work", "Go", "Groovy", "HEEX", "HTML", "JSDoc", "JSON", "JSONC", "Java", "JavaScript", "Lua", "Makefile", "Markdown", "Markdown-Inline", "Objective-C", "Objective-C++", "PHP", "Perl", "Plain Text", "Proto", "Python", "R", "Regex", "Ruby", "Rust", "SQL", "Scala", "Shell Script", "Svelte", "Swift", "TSX", "TypeScript", "XML", "YAML", "Zed Keybind Context"]
+Zed language server extensions must declare supported languages up front. If your language is not listed in `extension.toml`, add it to the `languages` array for `hexpeek-language-server`.
+
+## Development
+
+The extension launches the bundled language server artifact:
+
+```sh
+cd language_server
+npm install
+npm run build
 ```
-And this extension supports the above languages. If you are using a language which is not one of them, please add your language name manually.
+
+Commit both `language_server/src/server.js` and the rebuilt `language_server/dist/server.cjs` when changing language-server behavior.
 
 ## License
-Apache 2.0
+
+Apache-2.0
