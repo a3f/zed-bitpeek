@@ -33,8 +33,87 @@ function escapeMarkdownTableValue(value) {
     .replace(/`/g, "\\`");
 }
 
-function hoverTableRow(label, value) {
-  return `| ${escapeMarkdownTableValue(label)} | **${escapeMarkdownTableValue(value)}** |`;
+function hoverTableHeader(row) {
+  return `| ${escapeMarkdownTableValue(row.label)} | ${escapeMarkdownTableValue(row.value)} |`;
+}
+
+function hoverTableRow(row) {
+  return `| ${escapeMarkdownTableValue(row.label)} | **${escapeMarkdownTableValue(row.value)}** |`;
+}
+
+function translatedRow(label, value) {
+  return { label, value };
+}
+
+function normalizeMacroValue(value) {
+  const bit = value.match(/^BIT\(\s*(\d+)\s*\)$/i);
+  if (bit) {
+    return `BIT(${Number(bit[1])})`;
+  }
+
+  const genmask = value.match(/^GENMASK\(\s*(\d+)\s*,\s*(\d+)\s*\)$/i);
+  if (genmask) {
+    return `GENMASK(${Number(genmask[1])}, ${Number(genmask[2])})`;
+  }
+}
+
+function stripMacroComment(value) {
+  return value.replace(/\s+\/\*.*\*\/\s*$/, "");
+}
+
+function normalizePrefixedInteger(value) {
+  const prefixedInteger = value.match(/^(0[bBoOxX])([0-9a-fA-F]+)$/);
+  if (!prefixedInteger) {
+    return value;
+  }
+
+  const digits = prefixedInteger[2].replace(/^0+/, "") || "0";
+  return `${prefixedInteger[1].toLowerCase()}${digits.toLowerCase()}`;
+}
+
+function normalizeHeadingValue(value) {
+  const withoutComment = stripMacroComment(String(value)).trim();
+  const macro = normalizeMacroValue(withoutComment);
+  if (macro) {
+    return macro;
+  }
+
+  return normalizePrefixedInteger(withoutComment.replace(/[_']/g, ""));
+}
+
+function normalizeHoveredValue(value) {
+  return normalizeHeadingValue(stripIntegerSuffix(value)).toLowerCase();
+}
+
+function normalizeTranslatedValue(value) {
+  return normalizeHeadingValue(value).toLowerCase();
+}
+
+function promotedHeadingValue(row) {
+  if (row.label === "Macro") {
+    return String(row.value).trim();
+  }
+
+  return normalizeHeadingValue(row.value);
+}
+
+function promotedHoverRows(word, rows) {
+  const normalizedWord = normalizeHoveredValue(word);
+  const headingIndex = rows.findIndex(
+    (row) => normalizeTranslatedValue(row.value) === normalizedWord,
+  );
+
+  if (headingIndex < 0) {
+    return { heading: null, rows };
+  }
+
+  return {
+    heading: translatedRow(
+      rows[headingIndex].label,
+      promotedHeadingValue(rows[headingIndex]),
+    ),
+    rows: rows.filter((_, index) => index !== headingIndex),
+  };
 }
 
 function isPowerOfTwo(value) {
@@ -293,7 +372,7 @@ function parseNumberAtPosition(doc, position) {
       num = num * 16 + digit;
       bigNum = bigNum * 16n + BigInt(digit);
     }
-    hexs = numericWord.substring(2);
+    hexs = numericWord.substring(2).replace(/[_']/g, "");
   } else if (
     numericWord.match(/^([0-9]|[1-9]['0-9]*[0-9]|[1-9][_0-9]*[0-9])$/)
   ) {
@@ -422,29 +501,30 @@ connection.onHover((params) => {
   connection.console.log(`numInLE: ${num}`);
   connection.console.log(`ascii: ${ascii}`);
 
-  const rows = [
-    hoverTableRow("Binary", `0b${bigNum.toString(2)}`),
-    hoverTableRow("Octal", `0o${bigNum.toString(8)}`),
-    hoverTableRow("Decimal (BE)", bigNum),
-    hoverTableRow("Decimal (LE)", numInLE),
-    hoverTableRow("Hexadecimal", `0x${hexs}`),
+  let rows = [
+    translatedRow("Binary", `0b${bigNum.toString(2)}`),
+    translatedRow("Octal", `0o${bigNum.toString(8)}`),
+    translatedRow("Decimal (BE)", bigNum),
+    translatedRow("Decimal (LE)", numInLE),
+    translatedRow("Hexadecimal", `0x${hexs}`),
   ];
   if (macro) {
-    rows.push(hoverTableRow("Macro", macro));
+    rows.push(translatedRow("Macro", macro));
   }
   rows.push(
-    hoverTableRow("Ascii", ascii),
-    hoverTableRow("Time (S)", toISOString(num * 1000)),
-    hoverTableRow("Time (MS)", toISOString(num)),
+    translatedRow("Ascii", ascii),
+    translatedRow("Time (S)", toISOString(num * 1000)),
+    translatedRow("Time (MS)", toISOString(num)),
   );
+  const table = promotedHoverRows(word, rows);
+  const heading = table.heading ?? translatedRow("", "");
+  rows = table.rows.map(hoverTableRow);
 
   return {
     contents: {
       kind: "markdown",
-      value: `**${escapeMarkdownTableValue(word)}**
-
-|  |  |
-| --- | --- |
+      value: `${hoverTableHeader(heading)}
+| :--- | :--- |
 ${rows.join("\n")}
 `,
     },
