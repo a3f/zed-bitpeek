@@ -9119,13 +9119,74 @@ function fromCharCode(code) {
   }
 }
 function escapeMarkdownTableValue(value) {
-  return String(value).replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/\*/g, "\\*").replace(/_/g, "\\_").replace(/`/g, "\\`");
+  return String(value).replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/`/g, "\\`").replace(/\*/g, "\\*").replace(/_/g, "\\_");
+}
+var CODE_GROUP_SEPARATOR = "\u2005";
+var CODE_GROUP_PAIR_SEPARATOR = "\u2004";
+function codeGroupSeparator(index, groupCount) {
+  const groupsToRight = groupCount - index - 1;
+  return groupsToRight % 2 === 0 ? CODE_GROUP_PAIR_SEPARATOR : CODE_GROUP_SEPARATOR;
+}
+function groupedCodeSpans(value, prefix, groupLength) {
+  const text = String(value);
+  const normalizedPrefix = prefix.toLowerCase();
+  const hasPrefix = text.toLowerCase().startsWith(normalizedPrefix);
+  const digits = hasPrefix ? text.substring(prefix.length) : text;
+  const groups = [];
+  for (let end = digits.length; end > 0; end -= groupLength) {
+    groups.unshift(digits.substring(Math.max(0, end - groupLength), end));
+  }
+  if (groups.length === 0) {
+    return escapeMarkdownTableValue(
+      hasPrefix ? text.substring(0, prefix.length) : ""
+    );
+  }
+  if (hasPrefix) {
+    groups[0] = `${text.substring(0, prefix.length)}${groups[0]}`;
+  }
+  return groups.map((group, index) => {
+    const escaped = escapeMarkdownTableValue(group);
+    if (index === groups.length - 1) {
+      return escaped;
+    }
+    return `${escaped}${codeGroupSeparator(index, groups.length)}`;
+  }).join("");
+}
+function formattedMacroValue(value) {
+  const text = String(value).trim();
+  const macro = text.match(/^(.*?)\s+(\/\*.*\*\/)$/);
+  if (!macro) {
+    return escapeMarkdownTableValue(text);
+  }
+  return [
+    escapeMarkdownTableValue(macro[1]),
+    escapeMarkdownTableValue(macro[2])
+  ].join(" ");
+}
+function formattedHoverValue(row) {
+  switch (row.label) {
+    case "Binary":
+      return groupedCodeSpans(row.value, "0b", 4);
+    case "Octal":
+      return groupedCodeSpans(row.value, "0o", 3);
+    case "Dec (BE)":
+    case "Dec (LE)":
+      return groupedCodeSpans(row.value, "", 3);
+    case "Hex":
+      return groupedCodeSpans(row.value, "0x", 4);
+    case "Macro":
+      return formattedMacroValue(row.value);
+    case "Ascii":
+      return escapeMarkdownTableValue(row.value);
+    default:
+      return row.value === "" ? "" : escapeMarkdownTableValue(row.value);
+  }
 }
 function hoverTableHeader(row) {
-  return `| ${escapeMarkdownTableValue(row.label)} | ${escapeMarkdownTableValue(row.value)} |`;
+  return `| ${escapeMarkdownTableValue(row.label)} | ${formattedHoverValue(row)} |`;
 }
 function hoverTableRow(row) {
-  return `| ${escapeMarkdownTableValue(row.label)} | **${escapeMarkdownTableValue(row.value)}** |`;
+  return `| ${escapeMarkdownTableValue(row.label)} | ${formattedHoverValue(row)} |`;
 }
 function translatedRow(label, value) {
   return { label, value };
