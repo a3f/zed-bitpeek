@@ -41,6 +41,22 @@ Enable the BitPeek language server for the languages where you want numeric hove
 
 Zed language server extensions must declare supported languages up front. If your language is not listed in `extension.toml`, add it to the `languages` array for `bitpeek-language-server`.
 
+## Configuration
+
+BitPeek groups binary, octal, decimal, and hexadecimal hover values by default. Disable the visual spacing between groups with:
+
+```json
+{
+  "lsp": {
+    "bitpeek-language-server": {
+      "settings": {
+        "groupSpacing": false
+      }
+    }
+  }
+}
+```
+
 ## Development
 
 The extension launches the bundled language server artifact:

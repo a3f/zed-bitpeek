@@ -8,6 +8,10 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 const connection = createConnection(ProposedFeatures.all);
 const documents = new TextDocuments(TextDocument);
 const MAX_MACRO_BIT_INDEX = 4096;
+const DEFAULT_SETTINGS = {
+  groupSpacing: true,
+};
+let settings = { ...DEFAULT_SETTINGS };
 
 function fromCharCode(code) {
   if (0 <= code && code <= 31) {
@@ -32,10 +36,40 @@ const CODE_GROUP_SEPARATOR = "\u2005";
 const CODE_GROUP_PAIR_SEPARATOR = "\u2004";
 
 function codeGroupSeparator(index, groupCount) {
+  if (!settings.groupSpacing) {
+    return "";
+  }
+
   const groupsToRight = groupCount - index - 1;
   return groupsToRight % 2 === 0
     ? CODE_GROUP_PAIR_SEPARATOR
     : CODE_GROUP_SEPARATOR;
+}
+
+function normalizedSettings(value) {
+  if (!value || typeof value !== "object") {
+    return {};
+  }
+
+  const source =
+    value.settings && typeof value.settings === "object"
+      ? value.settings
+      : value;
+
+  return {
+    groupSpacing:
+      typeof source.groupSpacing === "boolean"
+        ? source.groupSpacing
+        : undefined,
+  };
+}
+
+function applySettings(value) {
+  const updated = normalizedSettings(value);
+
+  if (updated.groupSpacing !== undefined) {
+    settings.groupSpacing = updated.groupSpacing;
+  }
 }
 
 function groupedCodeSpans(value, prefix, groupLength) {
@@ -532,12 +566,18 @@ function macroReplacementActions(uri, parsed) {
 }
 
 connection.onInitialize((params) => {
+  applySettings(params.initializationOptions);
+
   return {
     capabilities: {
       hoverProvider: true,
       codeActionProvider: true,
     },
   };
+});
+
+connection.onDidChangeConfiguration((params) => {
+  applySettings(params.settings);
 });
 
 connection.onHover((params) => {

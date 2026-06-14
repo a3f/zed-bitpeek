@@ -23,6 +23,26 @@ impl zed::Extension for BitPeekExtension {
             env: Default::default(),
         })
     }
+
+    fn language_server_initialization_options(
+        &mut self,
+        language_server_id: &zed::LanguageServerId,
+        worktree: &zed::Worktree,
+    ) -> zed::Result<Option<zed::serde_json::Value>> {
+        Ok(zed::settings::LspSettings::for_worktree(language_server_id.as_ref(), worktree)?
+            .initialization_options)
+    }
+
+    fn language_server_workspace_configuration(
+        &mut self,
+        language_server_id: &zed::LanguageServerId,
+        worktree: &zed::Worktree,
+    ) -> zed::Result<Option<zed::serde_json::Value>> {
+        Ok(
+            zed::settings::LspSettings::for_worktree(language_server_id.as_ref(), worktree)?
+                .settings,
+        )
+    }
 }
 
 zed::register_extension!(BitPeekExtension);
