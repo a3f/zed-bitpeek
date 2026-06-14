@@ -441,9 +441,9 @@ connection.onHover((params) => {
   return {
     contents: {
       kind: "markdown",
-      value: `[**HexPeek**](https://github.com/A-23187/zed-hexpeek) \`${word}\`
+      value: `**${escapeMarkdownTableValue(word)}**
 
-| Field | Value |
+|  |  |
 | --- | --- |
 ${rows.join("\n")}
 `,
