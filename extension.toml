@@ -1,11 +1,11 @@
-id = "hexpeek"
-name = "HexPeek"
-description = "HexPeek, peek various forms of an number literal"
+id = "bitpeek"
+name = "BitPeek"
+description = "BitPeek, peek bit-oriented forms of a number literal"
 version = "0.1.3"
 schema_version = 1
 authors = ["A23187 <a23187.1979421048@gmail.com>"]
 repository = "https://github.com/A-23187/zed-hexpeek"
 
-[language_servers.hexpeek-language-server]
-name = "HexPeek Language Server"
+[language_servers.bitpeek-language-server]
+name = "BitPeek Language Server"
 languages = ["Astro", "C", "C#", "C++", "CSS", "Clojure", "Coffeescript", "Dart", "Diff", "ERB", "Elixir", "Erlang", "F#", "GLSL", "Git Commit", "Gleam", "Go Mod", "Go Work", "Go", "Groovy", "HEEX", "HTML", "JSDoc", "JSON", "JSONC", "Java", "JavaScript", "Lua", "Makefile", "Markdown", "Markdown-Inline", "Objective-C", "Objective-C++", "PHP", "Perl", "Plain Text", "Proto", "Python", "R", "Regex", "Ruby", "Rust", "SQL", "Scala", "Shell Script", "Svelte", "Swift", "TSX", "TypeScript", "XML", "YAML", "Zed Keybind Context"]

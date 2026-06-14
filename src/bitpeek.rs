@@ -5,9 +5,9 @@ const SERVER_SCRIPT: &'static str = concat!(
     "/language_server/dist/server.cjs"
 );
 
-struct HexPeekExtension;
+struct BitPeekExtension;
 
-impl zed::Extension for HexPeekExtension {
+impl zed::Extension for BitPeekExtension {
     fn new() -> Self {
         Self {}
     }
@@ -25,4 +25,4 @@ impl zed::Extension for HexPeekExtension {
     }
 }
 
-zed::register_extension!(HexPeekExtension);
+zed::register_extension!(BitPeekExtension);

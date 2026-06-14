@@ -1,6 +1,12 @@
-# Zed HexPeek
+# Zed BitPeek
 
-Zed HexPeek is a [Zed](https://zed.dev) extension that shows alternate representations of integer literals on hover. This repository is based on [A-23187/zed-hexpeek](https://github.com/A-23187/zed-hexpeek) and keeps the original literal conversion behavior while adding C and Linux-kernel-oriented helpers.
+Zed BitPeek is a [Zed](https://zed.dev) extension that shows alternate representations of integer literals on hover. It is a renamed fork of [A-23187/zed-hexpeek](https://github.com/A-23187/zed-hexpeek), keeping the original literal conversion behavior while adding C and Linux-kernel-oriented helpers.
+
+## Credits And Status
+
+BitPeek is based on HexPeek by [A-23187](https://github.com/A-23187). The rename is intentional to avoid confusion with the original project and marketplace extension; this repository is a derivative, not the upstream project.
+
+Credit for the original Zed extension, language-server integration, and baseline hover conversions go to the original author. This fork were vibecoded to accomodate my workflow. No support is provided in this repository.
 
 ## What Changed From Upstream
 
@@ -17,23 +23,23 @@ Zed HexPeek is a [Zed](https://zed.dev) extension that shows alternate represent
 
 ![Code actions for replacing a one-bit hex literal](screenshots/hex-1bit-set-codeaction.png)
 
-![Additional macro hover/code-action example](screenshots/hex-2bit-set-codeaction.png)
+![Code action for replacing a contiguous bit-mask hex literal](screenshots/hex-2bit-set-codeaction.png)
 
 ## Setup
 
-Enable the HexPeek language server for the languages where you want numeric hovers:
+Enable the BitPeek language server for the languages where you want numeric hovers:
 
 ```json
 {
   "languages": {
     "C++": {
-      "language_servers": ["hexpeek-language-server"]
+      "language_servers": ["bitpeek-language-server"]
     }
   }
 }
 ```
 
-Zed language server extensions must declare supported languages up front. If your language is not listed in `extension.toml`, add it to the `languages` array for `hexpeek-language-server`.
+Zed language server extensions must declare supported languages up front. If your language is not listed in `extension.toml`, add it to the `languages` array for `bitpeek-language-server`.
 
 ## Development
 

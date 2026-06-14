@@ -1,11 +1,11 @@
 [package]
-name = "zed-hexpeek"
+name = "zed-bitpeek"
 version = "0.1.3"
 edition = "2024"
 publish = false
 
 [lib]
-path = "src/hexpeek.rs"
+path = "src/bitpeek.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
