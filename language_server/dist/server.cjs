@@ -9118,10 +9118,6 @@ function fromCharCode(code) {
     return "\u2421";
   }
 }
-function toISOString(value) {
-  const date = new Date(value);
-  return Number.isNaN(date.valueOf()) ? "Invalid Date" : date.toISOString();
-}
 function escapeMarkdownTableValue(value) {
   return String(value).replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/\*/g, "\\*").replace(/_/g, "\\_").replace(/`/g, "\\`");
 }
@@ -9529,9 +9525,7 @@ connection.onHover((params) => {
     rows.push(translatedRow("Macro", macro));
   }
   rows.push(
-    translatedRow("Ascii", ascii),
-    translatedRow("Time (S)", toISOString(num * 1e3)),
-    translatedRow("Time (MS)", toISOString(num))
+    translatedRow("Ascii", ascii)
   );
   const table = promotedHoverRows(word, rows);
   const heading = table.heading ?? translatedRow("", "");

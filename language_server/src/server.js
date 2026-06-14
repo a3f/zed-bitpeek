@@ -19,11 +19,6 @@ function fromCharCode(code) {
   }
 }
 
-function toISOString(value) {
-  const date = new Date(value);
-  return Number.isNaN(date.valueOf()) ? "Invalid Date" : date.toISOString();
-}
-
 function escapeMarkdownTableValue(value) {
   return String(value)
     .replace(/\\/g, "\\\\")
@@ -513,8 +508,6 @@ connection.onHover((params) => {
   }
   rows.push(
     translatedRow("Ascii", ascii),
-    translatedRow("Time (S)", toISOString(num * 1000)),
-    translatedRow("Time (MS)", toISOString(num)),
   );
   const table = promotedHoverRows(word, rows);
   const heading = table.heading ?? translatedRow("", "");
