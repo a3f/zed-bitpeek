@@ -9122,6 +9122,12 @@ function toISOString(value) {
   const date = new Date(value);
   return Number.isNaN(date.valueOf()) ? "Invalid Date" : date.toISOString();
 }
+function escapeMarkdownTableValue(value) {
+  return String(value).replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/\*/g, "\\*").replace(/_/g, "\\_").replace(/`/g, "\\`");
+}
+function hoverTableRow(label, value) {
+  return `| ${escapeMarkdownTableValue(label)} | **${escapeMarkdownTableValue(value)}** |`;
+}
 function isPowerOfTwo(value) {
   return value > 0n && (value & value - 1n) === 0n;
 }
@@ -9431,8 +9437,6 @@ connection.onHover((params) => {
     return null;
   }
   const { word, num, bigNum, hexs, macro, range } = parsed;
-  const macroLine = macro ? `Macro:      ${macro}
-` : "";
   connection.console.log(`hex: ${hexs}`);
   let numInLE = 0;
   let ascii = "";
@@ -9451,20 +9455,29 @@ connection.onHover((params) => {
   }
   connection.console.log(`numInLE: ${num}`);
   connection.console.log(`ascii: ${ascii}`);
+  const rows = [
+    hoverTableRow("Binary", `0b${bigNum.toString(2)}`),
+    hoverTableRow("Octal", `0o${bigNum.toString(8)}`),
+    hoverTableRow("Decimal (BE)", bigNum),
+    hoverTableRow("Decimal (LE)", numInLE),
+    hoverTableRow("Hexadecimal", `0x${hexs}`)
+  ];
+  if (macro) {
+    rows.push(hoverTableRow("Macro", macro));
+  }
+  rows.push(
+    hoverTableRow("Ascii", ascii),
+    hoverTableRow("Time (S)", toISOString(num * 1e3)),
+    hoverTableRow("Time (MS)", toISOString(num))
+  );
   return {
     contents: {
       kind: "markdown",
       value: `[**HexPeek**](https://github.com/A-23187/zed-hexpeek) \`${word}\`
-\`\`\`
-Binary:      0b${bigNum.toString(2)}
-Octal:       0o${bigNum.toString(8)}
-Decimal (BE): ${bigNum}
-Decimal (LE): ${numInLE}
-Hexadecimal: 0x${hexs}
-${macroLine}Ascii:       ${ascii}
-Time (S):  ${toISOString(num * 1e3)}
-Time (MS): ${toISOString(num)}
-\`\`\`
+
+| Field | Value |
+| --- | --- |
+${rows.join("\n")}
 `
     },
     range
