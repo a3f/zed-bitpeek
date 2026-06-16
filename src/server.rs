@@ -62,6 +62,7 @@ use lsp_types::{
 use num_bigint::BigUint;
 use num_traits::{One, Zero};
 use serde_json::Value;
+use to_markdown_table::{MarkdownTable, TableRow};
 
 // ─── constants ───────────────────────────────────────────────────────────
 
@@ -232,13 +233,22 @@ impl Server {
             value: String::new(),
         });
 
-        let header = hover_table_header(&heading_row, &self.settings);
-        let row_lines: Vec<String> = rows
+        let header_cells = vec![
+            escape_md(&heading_row.label),
+            formatted_hover_value(&heading_row, &self.settings),
+        ];
+        let data_rows: Vec<TableRow> = rows
             .iter()
-            .map(|row| hover_table_row(row, &self.settings))
+            .map(|row| {
+                TableRow::new(vec![
+                    escape_md(&row.label),
+                    formatted_hover_value(row, &self.settings),
+                ])
+            })
             .collect();
 
-        let hover_value = format!("{}\n| :--- | :--- |\n{}\n", header, row_lines.join("\n"));
+        let table = MarkdownTable::new(Some(header_cells), data_rows).unwrap();
+        let hover_value = format!("{}\n", table);
 
         let hover = Hover {
             contents: HoverContents::Markup(MarkupContent {
@@ -1108,22 +1118,6 @@ fn formatted_hover_value(row: &Row, settings: &Settings) -> String {
             }
         }
     }
-}
-
-fn hover_table_header(row: &Row, settings: &Settings) -> String {
-    format!(
-        "| {} | {} |",
-        escape_md(&row.label),
-        formatted_hover_value(row, settings)
-    )
-}
-
-fn hover_table_row(row: &Row, settings: &Settings) -> String {
-    format!(
-        "| {} | {} |",
-        escape_md(&row.label),
-        formatted_hover_value(row, settings)
-    )
 }
 
 // ─── code actions ────────────────────────────────────────────────────────
